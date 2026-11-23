@@ -1,3 +1,5 @@
+import { getDesignSystem, getComponent } from '../src/design.js';
+import type { ReviewResult } from '../src/types.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
@@ -19,19 +21,26 @@ test('serves tools, resources and prompts over real MCP stdio', async () => {
       'get_style_rules',
       'review_svelte',
     ]);
-    for (const tool of tools.tools) assert.equal(tool.annotations.readOnlyHint, true);
+    for (const tool of tools.tools) assert.equal(tool.annotations?.readOnlyHint, true);
     const tokens = await client.callTool({
       name: 'get_design_system',
       arguments: { topic: 'tokens' },
     });
     assert.ok(!tokens.isError);
-    assert.ok(tokens.structuredContent.tokens['--lc-text-primary']);
+    assert.ok(
+      (tokens.structuredContent as ReturnType<typeof getDesignSystem<'tokens'>>).tokens[
+        '--lc-text-primary'
+      ],
+    );
     const component = await client.callTool({
       name: 'get_component',
       arguments: { name: 'ModalShell.svelte' },
     });
     assert.ok(!component.isError);
-    assert.match(component.structuredContent.source, /modalFocus/);
+    assert.match(
+      (component.structuredContent as ReturnType<typeof getComponent>).source,
+      /modalFocus/,
+    );
     const denied = await client.callTool({
       name: 'get_component',
       arguments: { name: '../../.env' },
@@ -42,7 +51,7 @@ test('serves tools, resources and prompts over real MCP stdio', async () => {
       arguments: { source: '<button class="bg-red-500">저장</button>' },
     });
     assert.ok(!invalid.isError);
-    assert.equal(invalid.structuredContent.verdict, 'fail');
+    assert.equal((invalid.structuredContent as ReviewResult).verdict, 'fail');
     const valid = await client.callTool({
       name: 'review_svelte',
       arguments: {
@@ -52,23 +61,47 @@ test('serves tools, resources and prompts over real MCP stdio', async () => {
       },
     });
     assert.ok(!valid.isError);
-    assert.equal(valid.structuredContent.verdict, 'pass');
+    assert.equal((valid.structuredContent as ReviewResult).verdict, 'pass');
     const oversized = await client.callTool({
       name: 'review_svelte',
       arguments: { source: 'x'.repeat(120001) },
     });
     assert.equal(oversized.isError, true);
     assert.equal((await client.listResources()).resources.length, 5);
-    assert.match(
-      (await client.readResource({ uri: 'lawcast://design/patterns' })).contents[0].text,
-      /one divider owner/,
-    );
+    const resource = (await client.readResource({ uri: 'lawcast://design/patterns' })).contents[0];
+    assert.ok('text' in resource);
+    assert.match(resource.text, /one divider owner/);
     assert.equal((await client.listPrompts()).prompts.length, 1);
-    assert.match(
-      (await client.getPrompt({ name: 'lawcast_ui_change', arguments: { task: '검색 화면 개선' } }))
-        .messages[0].content.text,
-      /review_svelte/,
+    const prompt = (
+      await client.getPrompt({ name: 'lawcast_ui_change', arguments: { task: '검색 화면 개선' } })
+    ).messages[0].content;
+    assert.equal(prompt.type, 'text');
+    assert.ok('text' in prompt);
+    assert.match(prompt.text, /review_svelte/);
+  } finally {
+    await client.close();
+  }
+});
+
+test('legacy server launcher works outside the package directory', async () => {
+  const { resolve } = await import('node:path');
+  const { tmpdir } = await import('node:os');
+  const client = new Client({ name: 'lawcast-cwd-test', version: '1.0.0' });
+  try {
+    await client.connect(
+      new StdioClientTransport({
+        command: process.execPath,
+        args: [resolve('src/server.js')],
+        cwd: tmpdir(),
+        stderr: 'pipe',
+      }),
     );
+    assert.equal((await client.listTools()).tools.length, 4);
+    const result = await client.callTool({
+      name: 'get_component',
+      arguments: { name: 'ModalShell.svelte' },
+    });
+    assert.ok(!result.isError);
   } finally {
     await client.close();
   }

@@ -3,3 +3,4 @@ coverage/
 verification/*.log
 
 verification/rollback-copy.svelte
+dist/

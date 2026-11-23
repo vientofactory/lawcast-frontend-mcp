@@ -6,7 +6,7 @@ import { getComponent, getDesignSystem, snapshot } from '../src/design.js';
 
 const valid =
   '<button type="button" data-testid="save" class="lc-button-primary min-h-11">저장</button>';
-const rules = (source) => reviewSvelte(source).findings.map((item) => item.rule);
+const rules = (source: string) => reviewSvelte(source).findings.map((item) => item.rule);
 test('accepts semantic source and preserves Korean UI text', () =>
   assert.equal(reviewSvelte(valid).verdict, 'pass'));
 test('reports hard-coded palette with responsive variants', () =>
@@ -99,7 +99,7 @@ test('CLI fails closed with no selected files', () => {
 
 test('bundled source hashes and fingerprint reproduce exactly', async () => {
   const { createHash } = await import('node:crypto');
-  const hash = (value) => createHash('sha256').update(value).digest('hex');
+  const hash = (value: string) => createHash('sha256').update(value).digest('hex');
   for (const entry of Object.values(snapshot.sources))
     assert.equal(hash(entry.source), entry.sha256);
   assert.equal(
@@ -113,7 +113,7 @@ test('CLI returns one for a violating baseline and zero for semantic source', ()
   for (const [path, status] of [
     ['verification/ORIGINAL.svelte', 1],
     ['verification/MODIFIED_FILE.svelte', 0],
-  ]) {
+  ] as const) {
     const result = spawnSync(process.execPath, ['src/cli.js', path], { encoding: 'utf8' });
     assert.equal(result.status, status);
     assert.ok(JSON.parse(result.stdout).results.length === 1);

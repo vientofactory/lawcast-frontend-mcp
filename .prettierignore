@@ -1,3 +1,4 @@
 package-lock.json
 design/snapshot.json
 verification/
+dist/

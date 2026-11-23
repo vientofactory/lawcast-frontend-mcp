@@ -1,11 +1,12 @@
+import type { Snapshot, Policy, DesignTopic } from './types.js';
 import { readFile } from 'node:fs/promises';
-export const snapshot = JSON.parse(
-  await readFile(new URL('../design/snapshot.json', import.meta.url), 'utf8'),
+export const snapshot: Snapshot = JSON.parse(
+  await readFile(new URL('../../design/snapshot.json', import.meta.url), 'utf8'),
 );
-export const policy = JSON.parse(
-  await readFile(new URL('../design/policy.json', import.meta.url), 'utf8'),
+export const policy: Policy = JSON.parse(
+  await readFile(new URL('../../design/policy.json', import.meta.url), 'utf8'),
 );
-export function getDesignSystem(topic = 'all') {
+export function getDesignSystem<T extends DesignTopic = 'all'>(topic: T = 'all' as T) {
   const metadata = {
     frontendVersion: snapshot.frontendVersion,
     commit: snapshot.commit,
@@ -25,9 +26,14 @@ export function getDesignSystem(topic = 'all') {
     patterns: policy.principles,
     rules: { rules: policy.rules, manualChecks: policy.manualChecks },
   };
-  return { metadata, ...(topic === 'all' ? sections : { [topic]: sections[topic] }) };
+  return {
+    metadata,
+    ...(topic === 'all' ? sections : { [topic]: sections[topic as Exclude<DesignTopic, 'all'>] }),
+  } as { metadata: typeof metadata } & (T extends 'all'
+    ? typeof sections
+    : Pick<typeof sections, Exclude<T, 'all'>>);
 }
-export function getComponent(name) {
+export function getComponent(name: string) {
   const path = snapshot.components.find(
     (path) => path === name || path.slice('src/lib/components/'.length) === name,
   );
@@ -42,7 +48,7 @@ export function getComponent(name) {
   };
 }
 
-export function getStyleRules(query) {
+export function getStyleRules(query: string) {
   const matches = snapshot.cssRules.filter((rule) => rule.selector.includes(query));
   return {
     query,

@@ -1,10 +1,12 @@
+import type { AST, CompileError } from 'svelte/compiler';
+import type { Finding, RuleId, ReviewResult } from './types.js';
 import { parse, compile } from 'svelte/compiler';
 import postcss from 'postcss';
 import { snapshot, policy } from './design.js';
 
 export const MAX_SOURCE_LENGTH = 120_000;
-function walk(root, visit) {
-  const stack = [root];
+function walk(root: unknown, visit: (node: AST.SvelteNode) => void) {
+  const stack: unknown[] = [root];
   while (stack.length) {
     const node = stack.pop();
     if (!node || typeof node !== 'object') continue;
@@ -12,14 +14,14 @@ function walk(root, visit) {
       stack.push(...node);
       continue;
     }
-    visit(node);
+    if ('type' in node && typeof node.type === 'string') visit(node as AST.SvelteNode);
     for (const [key, value] of Object.entries(node)) {
       if (key !== 'loc' && value && typeof value === 'object') stack.push(value);
     }
   }
 }
-function strings(value) {
-  const result = [];
+function strings(value: unknown) {
+  const result: string[] = [];
   walk(value, (node) => {
     if (node.type === 'Text') result.push(node.data);
     if (node.type === 'Literal' && typeof node.value === 'string') result.push(node.value);
@@ -27,14 +29,14 @@ function strings(value) {
   });
   return result.join(' ');
 }
-function isDynamic(value) {
+function isDynamic(value: unknown) {
   let dynamic = false;
   walk(value, (node) => {
     if (node.type === 'ExpressionTag') dynamic = true;
   });
   return dynamic;
 }
-function baseUtility(value) {
+function baseUtility(value: string) {
   let depth = 0;
   let start = 0;
   for (let i = 0; i < value.length; i++) {
@@ -44,35 +46,37 @@ function baseUtility(value) {
   }
   return value.slice(start).replace(/^!|!$/g, '');
 }
-export function reviewSvelte(source, filename = 'Component.svelte') {
+export function reviewSvelte(source: string, filename = 'Component.svelte'): ReviewResult {
   if (typeof source !== 'string' || source.length > MAX_SOURCE_LENGTH)
     throw new Error(`Source must be a string of at most ${MAX_SOURCE_LENGTH} characters.`);
-  const findings = [];
+  const findings: Finding[] = [];
   const seen = new Set();
-  const add = (rule, message, offset = 0) => {
+  const add = (rule: RuleId, message: string, offset = 0) => {
     const definition = policy.rules.find((item) => item.id === rule);
+    if (!definition) throw new Error(`Unknown rule: ${rule}`);
     const line = source.slice(0, offset).split('\n').length;
     const key = `${rule}:${line}:${message}`;
     if (seen.has(key)) return;
     seen.add(key);
     findings.push({ rule, severity: definition.severity, line, message, fix: definition.fix });
   };
-  let ast;
+  let ast: AST.Root | undefined;
   try {
     ast = parse(source, { modern: true });
-  } catch (error) {
+  } catch (caught) {
+    const error = caught as CompileError & { reason?: string };
     add('svelte', `${error.code ?? 'parse'}: ${error.message}`, error.position?.[0] ?? 0);
   }
   if (ast) {
     const localClasses = new Set();
-    const checkCss = (text, offset, inline = false) => {
+    const checkCss = (text: string, offset: number, inline = false) => {
       try {
         const css = postcss.parse(inline ? `x{${text}}` : text);
         css.walkRules((rule) => {
           for (const match of rule.selector.matchAll(/\.(lc-[\w-]+)/g)) localClasses.add(match[1]);
         });
         css.walkDecls((decl) => {
-          const position = offset + Math.max(0, decl.source.start.offset - (inline ? 2 : 0));
+          const position = offset + Math.max(0, decl.source!.start!.offset - (inline ? 2 : 0));
           if (/#[\da-f]{3,8}\b|\b(?:rgba?|hsla?|oklch|oklab|lab|lch|hwb)\(/i.test(decl.value))
             add('raw-color', `Hard-coded color in ${decl.prop}: ${decl.value}`, position);
           else if (
@@ -106,7 +110,8 @@ export function reviewSvelte(source, filename = 'Component.svelte') {
               position,
             );
         });
-      } catch (error) {
+      } catch (caught) {
+        const error = caught as CompileError & { reason?: string };
         add('svelte', `CSS: ${error.reason ?? error.message}`, offset);
       }
     };
@@ -118,7 +123,7 @@ export function reviewSvelte(source, filename = 'Component.svelte') {
         ast.css.start,
       );
     }
-    const checkClasses = (text, offset) => {
+    const checkClasses = (text: string, offset: number) => {
       for (const value of text.split(/\s+/).filter(Boolean)) {
         const utility = baseUtility(value);
         if (
@@ -155,7 +160,7 @@ export function reviewSvelte(source, filename = 'Component.svelte') {
     walk(ast.fragment, (node) => {
       if (node.type === 'HtmlTag')
         add('dynamic-style', 'Raw HTML requires content and design review.', node.start);
-      if (!node.attributes) return;
+      if (!('attributes' in node)) return;
       if (node.type === 'SvelteElement')
         add('dynamic-style', 'Dynamic element requires runtime review.', node.start);
       for (const attr of node.attributes) {
@@ -165,13 +170,20 @@ export function reviewSvelte(source, filename = 'Component.svelte') {
             'Spread attributes may override classes, style or semantics.',
             attr.start,
           );
+        if (!('name' in attr)) continue;
         if (attr.type === 'ClassDirective') checkClasses(attr.name, attr.start);
-        if (attr.name === 'class' || attr.type === 'ClassDirective') {
+        if (
+          (attr.type === 'Attribute' && attr.name === 'class') ||
+          attr.type === 'ClassDirective'
+        ) {
           checkClasses(strings(attr.value), attr.start);
           if (isDynamic(attr.value))
             add('dynamic-style', 'Dynamic class expression requires runtime review.', attr.start);
         }
-        if (attr.name === 'style' || attr.type === 'StyleDirective') {
+        if (
+          (attr.type === 'Attribute' && attr.name === 'style') ||
+          attr.type === 'StyleDirective'
+        ) {
           const text = strings(attr.value);
           if (!isDynamic(attr.value)) {
             checkCss(
@@ -185,7 +197,11 @@ export function reviewSvelte(source, filename = 'Component.svelte') {
         }
       }
       if (node.type !== 'RegularElement') return;
-      const attrs = new Map(node.attributes.map((attr) => [attr.name, attr]));
+      const attrs = new Map(
+        node.attributes
+          .filter((attr): attr is AST.Attribute => attr.type === 'Attribute')
+          .map((attr) => [attr.name, attr]),
+      );
       if (node.name === 'dialog' || strings(attrs.get('role')?.value) === 'dialog')
         add('custom-modal', 'Custom dialog detected.', node.start);
       if (
@@ -196,13 +212,20 @@ export function reviewSvelte(source, filename = 'Component.svelte') {
       )
         add('missing-testid', `<${node.name}> has no data-testid.`, node.start);
     });
-    for (const script of [ast.instance, ast.module].filter(Boolean)) {
+    for (const script of [ast.instance, ast.module]) {
+      if (!script) continue;
       walk(script.content, (node) => {
         if (
           (node.type === 'LabeledStatement' && node.label.name === '$') ||
-          (node.type === 'ExportNamedDeclaration' && node.declaration?.kind === 'let')
+          (node.type === 'ExportNamedDeclaration' &&
+            node.declaration?.type === 'VariableDeclaration' &&
+            node.declaration.kind === 'let')
         )
-          add('legacy-svelte', 'Legacy reactive/props syntax detected.', node.start);
+          add(
+            'legacy-svelte',
+            'Legacy reactive/props syntax detected.',
+            'start' in node ? Number(node.start) : 0,
+          );
       });
     }
     if (source.includes('svelte-ignore'))
@@ -216,7 +239,8 @@ export function reviewSvelte(source, filename = 'Component.svelte') {
       for (const warning of result.warnings)
         if (warning.code.startsWith('a11y_'))
           add('svelte', `${warning.code}: ${warning.message}`, warning.start?.character ?? 0);
-    } catch (error) {
+    } catch (caught) {
+      const error = caught as CompileError & { reason?: string };
       add('svelte', `${error.code ?? 'compile'}: ${error.message}`, error.position?.[0] ?? 0);
     }
   }
