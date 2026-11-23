@@ -16,9 +16,13 @@
     "start": "node src/server.js",
     "snapshot": "node scripts/snapshot.js",
     "check": "node src/cli.js",
-    "test": "node --test",
+    "test": "node --test dist/test/*.test.js",
     "lint": "prettier --check .",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "prepare": "npm run build",
+    "pretest": "npm run build"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.26.0",
@@ -27,6 +31,8 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
-    "prettier": "^3.9.10"
+    "@types/node": "^22.20.5",
+    "prettier": "^3.9.10",
+    "typescript": "^6.0.3"
   }
 }
