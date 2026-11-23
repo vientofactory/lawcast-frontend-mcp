@@ -1,0 +1,5 @@
+node_modules/
+coverage/
+verification/*.log
+
+verification/rollback-copy.svelte

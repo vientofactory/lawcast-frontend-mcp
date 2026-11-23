@@ -1,0 +1,128 @@
+{
+  "version": 1,
+  "principles": [
+    {
+      "id": "palette",
+      "guidance": "Use semantic --lc-* variables and lc-text-* classes for both themes. Neutral reading surfaces; accent indicates actions/status, not decoration.",
+      "evidence": ["src/app.css: :root", "src/app.css: html[data-theme='dark']"]
+    },
+    {
+      "id": "layout",
+      "guidance": "Use lc-main, lc-page-heading, lc-section and lc-flat-list/lc-flat-list-row. The page gutter owns horizontal spacing. Use one divider owner per section boundary, not nested card borders.",
+      "evidence": [
+        "src/lib/styles/layout.css: .lc-main",
+        "src/lib/styles/layout.css: .lc-flat-list"
+      ]
+    },
+    {
+      "id": "typography",
+      "guidance": "Use Pretendard and shared lc-page-title, lc-section-heading, lc-list-title. Page titles clamp 1.75rem to 2rem; sections 1.25rem; list titles 1.125rem; supporting text 0.875rem. Avoid shrinking readable metadata.",
+      "evidence": ["src/app.css: body", "src/lib/styles/layout.css: .lc-page-title"]
+    },
+    {
+      "id": "surfaces",
+      "guidance": "Prefer open/flat content. Do not add decorative shadows, blur or gradients. Generic rounded utilities resolve to 0.5rem, but explicit component overrides exist; do not flatten purposeful exceptions.",
+      "evidence": [
+        "src/app.css: [class*='rounded-']",
+        "src/app.css: [class*='shadow-']",
+        "src/lib/styles/layout.css: .lc-flat-list-row"
+      ]
+    },
+    {
+      "id": "interaction",
+      "guidance": "Reuse ModalShell/ModalCloseButton, FilterDialog, PaginationNav, LoadFailureState, FormFeedback and NotificationViewport. Use notifications.ts for transient feedback and persistent described field errors for validation. Preserve modal focus/closing lifetime and native disclosureMotion behavior.",
+      "evidence": [
+        "src/lib/components/ModalShell.svelte",
+        "src/lib/components/FilterDialog.svelte",
+        "src/lib/utils/notifications.ts",
+        "src/lib/utils/disclosure-motion.ts"
+      ]
+    },
+    {
+      "id": "accessibility",
+      "guidance": "Use semantic controls, accessible names, visible keyboard focus and data-testid on primary regions/interactive elements. Target at least 44px; mobile pagination uses 48px. Keep reduced-motion behavior, 320px layout and 200% text usable.",
+      "evidence": [
+        "src/lib/styles/layout.css: .lc-pagination",
+        "src/lib/utils/modal-focus.ts",
+        "src/lib/styles/layout.css: prefers-reduced-motion"
+      ]
+    },
+    {
+      "id": "states",
+      "guidance": "Distinguish loading, empty, error and HTTP 429 cooldown. Engine health is advisory and must not disable valid search. Preserve filters/cancelled drafts, focus and SSR-safe browser access.",
+      "evidence": [
+        "src/lib/components/LoadFailureState.svelte",
+        "src/lib/utils/request-failure.ts",
+        "src/lib/components/SemanticEngineStatus.svelte"
+      ]
+    },
+    {
+      "id": "implementation",
+      "guidance": "Use Svelte 5 runes, TypeScript, #lib aliases and FontAwesome. UI copy stays Korean; comments/test titles stay English. Inspect existing components before inventing a parallel abstraction.",
+      "evidence": ["src/lib/components/ModalShell.svelte", "src/routes/+layout.svelte"]
+    }
+  ],
+  "manualChecks": [
+    "Verify light/dark rendered contrast, focus visibility and keyboard order with browser/axe tests.",
+    "Verify 320px/mobile/desktop, 200% text, reduced motion, long Korean content and overflow.",
+    "Verify loading/empty/failure/429, cancellation, dialog focus restoration and transition interruption.",
+    "Verify hierarchy, single-owner dividers and shared-component reuse; static lint cannot certify visual equivalence."
+  ],
+  "rules": [
+    {
+      "id": "unknown-token",
+      "severity": "error",
+      "fix": "Choose an existing semantic --lc-* token from get_design_system(tokens)."
+    },
+    {
+      "id": "unknown-class",
+      "severity": "error",
+      "fix": "Reuse a documented lc-* class or define the component-local lc-* class explicitly."
+    },
+    {
+      "id": "raw-color",
+      "severity": "error",
+      "fix": "Use var(--lc-text-primary), var(--lc-surface-primary), var(--lc-border-soft) or an appropriate semantic status token."
+    },
+    {
+      "id": "decoration",
+      "severity": "error",
+      "fix": "Remove decorative shadow/blur/gradient; use a neutral surface and structural separator."
+    },
+    {
+      "id": "custom-modal",
+      "severity": "error",
+      "fix": "Reuse ModalShell or FilterDialog with shared focus/motion instead of a new dialog implementation."
+    },
+    {
+      "id": "missing-testid",
+      "severity": "error",
+      "fix": "Add a stable data-testid to the primary region or interactive control."
+    },
+    {
+      "id": "focus-hidden",
+      "severity": "error",
+      "fix": "Keep the shared focus-visible outline; do not suppress it."
+    },
+    {
+      "id": "legacy-svelte",
+      "severity": "error",
+      "fix": "Use $props/$state/$derived/$effect rather than export let or reactive labels."
+    },
+    {
+      "id": "dynamic-style",
+      "severity": "review",
+      "fix": "Inspect runtime class/style/spread/dynamic-element values; static analysis cannot approve them."
+    },
+    {
+      "id": "custom-style",
+      "severity": "review",
+      "fix": "Review custom CSS, non-semantic utilities and runtime behavior against design principles in a browser."
+    },
+    {
+      "id": "svelte",
+      "severity": "error",
+      "fix": "Resolve the compiler error or accessibility warning; do not add suppression comments."
+    }
+  ]
+}

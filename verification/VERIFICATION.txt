@@ -1,0 +1,44 @@
+LawCast frontend MCP verification
+Changed fields: class bg-blue-500 -> lc-button-primary; data-testid absent -> save.
+Branches: root codex/frontend-design-mcp; MCP codex/design-guardrails.
+Frontend sources were inspected, not modified.
+The original SHA-256 is preserved in the BASELINE result below.
+
+/Users/doyeonkim/Documents/programming/lawcast/frontend-mcp/verification/MODIFIED_FILE.svelte
+/Users/doyeonkim/Documents/programming/lawcast/frontend-mcp/verification/DIFF_FILE.patch
+/Users/doyeonkim/Documents/programming/lawcast/frontend-mcp/verification/VERIFICATION.txt
+/Users/doyeonkim/Documents/programming/lawcast/frontend-mcp/verification/ROLLBACK.sh
+
+BASELINE
+cwd: /Users/doyeonkim/Documents/programming/lawcast/frontend-mcp
+command: node scripts/verify.js baseline
+input: verification/ORIGINAL.svelte
+literal output: BASELINE: verdict=fail errors=2 checker_exit=1 sha256=884e49db3cb51628c8a40378c09d78a8752c11247d3a67b62a16bd186e2fe089
+exit status: 0
+
+MODIFIED
+cwd: /Users/doyeonkim/Documents/programming/lawcast/frontend-mcp
+command: node scripts/verify.js modified
+input: verification/MODIFIED_FILE.svelte
+literal output: MODIFIED: verdict=pass errors=0 checker_exit=0 sha256=6d586a6e0dbb039ee540eb92bd388ae83b801b99966cc51730acb2d375ce0960
+exit status: 0
+
+ROLLBACK
+cwd: /Users/doyeonkim/Documents/programming/lawcast/frontend-mcp
+command: node scripts/verify.js rollback
+input: verification/MODIFIED_FILE.svelte -> separate verification/rollback-copy.svelte
+literal output: ROLLBACK: verdict=fail errors=2 checker_exit=1 sha256=884e49db3cb51628c8a40378c09d78a8752c11247d3a67b62a16bd186e2fe089
+exit status: 0
+
+Restored behavior/status: separate rollback copy matches ORIGINAL.svelte byte-for-byte and again fails the guard with 2 errors/exit 1. MODIFIED_FILE.svelte remains changed and passes/exit 0.
+Proof harness exits 0 only when the checker exit and verdict match expectations.
+npm run lint: All matched files use Prettier code style! (exit 0)
+npm test: tests 31; pass 31; fail 0 (exit 0)
+python3 tools/check-agent-guidelines.py: agent-guideline violations: 0 (exit 0)
+Snapshot: byte-for-byte reproducible after extraction (cmp exit 0).
+
+Frontend: npm run lint && npm run check => svelte-check found 0 errors and 0 warnings; exit 0.
+Backend: npm run lint && npx tsc --noEmit && npm run build => exit 0; npm test -- --runInBand => 105 suites / 1419 tests passed; exit 0.
+Semantic-search: ruff check / format --check => all checks passed / 75 files already formatted; pytest => 421 passed; exit 0.
+Initial sandboxed HTTP/gRPC tests encountered EPERM binding loopback ports. They were stopped and rerun unchanged with local socket access; the complete reruns passed.
+Installed dependency audit: found 0 vulnerabilities after replacing vulnerable Zod 3 with patched Zod 4.6.7.

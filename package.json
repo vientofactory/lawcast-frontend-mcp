@@ -1,0 +1,32 @@
+{
+  "name": "lawcast-frontend-mcp",
+  "version": "0.1.0",
+  "description": "Source-backed LawCast design system and Svelte UI guardrails over MCP",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22"
+  },
+  "bin": {
+    "lawcast-frontend-mcp": "src/server.js",
+    "lawcast-design-check": "src/cli.js"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "snapshot": "node scripts/snapshot.js",
+    "check": "node src/cli.js",
+    "test": "node --test",
+    "lint": "prettier --check .",
+    "format": "prettier --write ."
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.26.0",
+    "postcss": "^8.5.6",
+    "svelte": "^5.57.3",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "prettier": "^3.9.10"
+  }
+}
