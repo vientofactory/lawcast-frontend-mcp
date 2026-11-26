@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 3,
   "principles": [
     {
       "id": "palette",
@@ -60,13 +60,49 @@
       "id": "implementation",
       "guidance": "Use Svelte 5 runes, TypeScript, #lib aliases and FontAwesome. UI copy stays Korean; comments/test titles stay English. Inspect existing components before inventing a parallel abstraction.",
       "evidence": ["src/lib/components/ModalShell.svelte", "src/routes/+layout.svelte"]
+    },
+    {
+      "id": "list-interaction",
+      "guidance": "Use lc-flat-list/lc-flat-list-row for navigable lists, lc-list-title for 1.125rem/600 titles, and native a.lc-list-link for the destination. Pointer hover must not change list-row backgrounds or title/metadata colors, decoration or movement on any device. Independent secondary buttons retain their neutral hover background. Keep neutral titles without underlines and preserve visible keyboard outlines, 44px link targets and the shared row background for keyboard focus on primary destinations or independent controls. Use a whole-row anchor only when there are no other actions; otherwise keep the title/information-region anchor separate from download, timeline and comparison controls. Preserve actual destination URLs, filters and modified-click behavior. Ordinary prose links keep lc-link; explicit secondary actions use lc-result-action-secondary with neutral text and no underline. Shared flat-row base styling must outrank legacy dark-theme card backgrounds so idle and pointer-hover states stay consistent.",
+      "evidence": [
+        "src/lib/styles/layout.css: .lc-list-link",
+        "src/lib/styles/layout.css: .lc-flat-list-row",
+        "src/routes/notices/changes/+page.svelte",
+        "src/lib/components/discussions/ThreadListView.svelte"
+      ]
+    },
+    {
+      "id": "icon-backplate",
+      "guidance": "FontAwesome decoration stays unboxed: no icon-only chip, background tile, rounded plate or padded wrapper. Use the bare glyph with semantic text color. Preserve real button hit targets/focus, stateful switch thumbs, status text badges and the surrounding persistent status/banner surface. Source state, renumbering, cooldown and modal icons follow the same rule.",
+      "evidence": [
+        "src/lib/components/RecentNotices.svelte",
+        "src/lib/components/Header.svelte",
+        "src/routes/notices/[num]/+page.svelte",
+        "src/lib/components/RateLimitOverlay.svelte"
+      ]
+    },
+    {
+      "id": "test-authoring",
+      "guidance": "Author first-party tests/helpers/fixtures as strictly checked TypeScript .ts, never standalone .mjs/.mts/.js/.cjs test sources. Reuse backend Jest, frontend Playwright/Node node:test and MCP compiled TypeScript node:test as already owned by each package. Preserve package module semantics, assertions, failure propagation and executable fixture discovery. Generated JavaScript and vendored upstream tests are exceptions. Frontend pure tests use npm run test:unit and npm run check:tests; the root guideline checker enforces T2.",
+      "evidence": [
+        "AGENTS.md: Test Source Format and Runner Ownership",
+        "frontend/tsconfig.tests.json",
+        "frontend/package.json",
+        "frontend-mcp/tsconfig.json"
+      ]
+    },
+    {
+      "id": "readme-scope",
+      "guidance": "Keep README a concise project usage guide: purpose, requirements, install/connect/configure, common commands and links. Put design, coding and test-authoring rules in their owning policy or AGENTS.md and link rather than duplicate them. Exclude PR required-check lists, branch protection, internal CI matrices and task verification logs. Preserve technical examples, actual operating limitations and the existing document language.",
+      "evidence": ["AGENTS.md: README Scope and Writing Rules", "README.md"]
     }
   ],
   "manualChecks": [
     "Verify light/dark rendered contrast, focus visibility and keyboard order with browser/axe tests.",
     "Verify 320px/mobile/desktop, 200% text, reduced motion, long Korean content and overflow.",
     "Verify loading/empty/failure/429, cancellation, dialog focus restoration and transition interruption.",
-    "Verify hierarchy, single-owner dividers and shared-component reuse; static lint cannot certify visual equivalence."
+    "Verify hierarchy, single-owner dividers and shared-component reuse; static lint cannot certify visual equivalence.",
+    "Verify test/helper/fixture sources are .ts, included in strict type checking and launched by the existing package runner; update CI and preserve vendor/generated-format exceptions."
   ],
   "rules": [
     {
@@ -123,6 +159,16 @@
       "id": "svelte",
       "severity": "error",
       "fix": "Resolve the compiler error or accessibility warning; do not add suppression comments."
+    },
+    {
+      "id": "list-interaction",
+      "severity": "error",
+      "fix": "Use native a.lc-list-link and lc-list-title with a neutral, hover-inert lc-flat-list-row. Remove row hover backgrounds/colors/movement, lc-card-list-link and title lc-link/underlines. Keep secondary actions separate and preserve keyboard focus feedback."
+    },
+    {
+      "id": "icon-backplate",
+      "severity": "error",
+      "fix": "Remove the icon-only background/chip, radius and padding. Keep the glyph semantic color, button hit area, stateful controls and surrounding status content."
     }
   ]
 }

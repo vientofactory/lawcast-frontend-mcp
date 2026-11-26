@@ -14,6 +14,7 @@ test('serves tools, resources and prompts over real MCP stdio', async () => {
   const client = new Client({ name: 'lawcast-test', version: '1.0.0' });
   try {
     await client.connect(transport);
+    assert.equal(client.getServerVersion()?.version, '0.1.1');
     const tools = await client.listTools();
     assert.deepEqual(tools.tools.map((item) => item.name).sort(), [
       'get_component',
@@ -40,6 +41,43 @@ test('serves tools, resources and prompts over real MCP stdio', async () => {
     assert.match(
       (component.structuredContent as ReturnType<typeof getComponent>).source,
       /modalFocus/,
+    );
+    const patterns = await client.callTool({
+      name: 'get_design_system',
+      arguments: { topic: 'patterns' },
+    });
+    const principles = (
+      patterns.structuredContent as ReturnType<typeof getDesignSystem<'patterns'>>
+    ).patterns;
+    assert.ok(principles.some((item) => item.id === 'list-interaction'));
+    assert.ok(principles.some((item) => item.id === 'icon-backplate'));
+    assert.ok(
+      principles.some(
+        (item) => item.id === 'test-authoring' && item.guidance.includes('TypeScript .ts'),
+      ),
+    );
+    const styles = await client.callTool({
+      name: 'get_style_rules',
+      arguments: { query: '.lc-list-link' },
+    });
+    assert.match(JSON.stringify(styles.structuredContent), /--lc-text-primary/);
+    const listViolation = await client.callTool({
+      name: 'review_svelte',
+      arguments: { source: '<h2 class="lc-list-title lc-link">Title</h2>' },
+    });
+    assert.ok(
+      (listViolation.structuredContent as ReviewResult).findings.some(
+        (finding) => finding.rule === 'list-interaction',
+      ),
+    );
+    const bareIcons = await client.callTool({
+      name: 'get_component',
+      arguments: { name: 'RecentNotices.svelte' },
+    });
+    assert.ok(
+      !(bareIcons.structuredContent as ReturnType<typeof getComponent>).source.includes(
+        'lc-icon-accent-success',
+      ),
     );
     const denied = await client.callTool({
       name: 'get_component',

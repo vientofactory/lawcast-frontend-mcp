@@ -6,7 +6,7 @@ import { getComponent, getDesignSystem, snapshot } from '../src/design.js';
 
 const valid =
   '<button type="button" data-testid="save" class="lc-button-primary min-h-11">저장</button>';
-const rules = (source: string) => reviewSvelte(source).findings.map((item) => item.rule);
+const rules = (source: string): string[] => reviewSvelte(source).findings.map((item) => item.rule);
 test('accepts semantic source and preserves Korean UI text', () =>
   assert.equal(reviewSvelte(valid).verdict, 'pass'));
 test('reports hard-coded palette with responsive variants', () =>
@@ -154,4 +154,79 @@ test('CLI returns two for runtime review and leaves input unchanged', async () =
   } finally {
     rmSync(directory, { recursive: true });
   }
+});
+
+test('rejects colored or underlined list titles and descendants', () => {
+  for (const source of [
+    '<a href="/notices/1" data-testid="row" class="lc-list-link hover:text-[var(--lc-text-accent)]">Title</a>',
+    '<h2 class="lc-list-title lc-link">Title</h2>',
+    '<h2 class="lc-list-title"><a href="/notices/1" data-testid="title" class="lc-link">Title</a></h2>',
+    '<h2 class="lc-list-title underline">Title</h2>',
+    '<a href="/notices/1" data-testid="row" class="lc-list-link"><span class="group-hover:translate-x-0.5">Arrow</span></a>',
+    '<a href="/notices/1" data-testid="row" class="lc-card-list-link">Title</a>',
+  ])
+    assert.ok(rules(source).includes('list-interaction'), source);
+});
+test('accepts neutral list links and leaves ordinary prose links distinct', () => {
+  const source =
+    '<a href="/notices/1" data-testid="row" class="lc-list-link"><h2 class="lc-list-title">Title</h2></a>';
+  assert.equal(reviewSvelte(source).verdict, 'pass');
+  assert.ok(
+    !rules('<a href="/about" data-testid="about" class="lc-link">About</a>').includes(
+      'list-interaction',
+    ),
+  );
+});
+test('rejects static and dynamic decorative icon backplates', () => {
+  for (const classes of [
+    'lc-chip-warning rounded-lg p-2',
+    'bg-[var(--lc-surface-hover)]',
+    '{active ? "lc-chip-blue" : "lc-text-primary"}',
+  ]) {
+    const value = classes.startsWith('{') ? classes : `"${classes}"`;
+    const source = `<script>import { FontAwesomeIcon } from '@fortawesome/svelte-fontawesome'; let active = $state(true)</script><span class=${value}><FontAwesomeIcon icon="bell" /></span>`;
+    assert.ok(rules(source).includes('icon-backplate'), classes);
+  }
+});
+test('preserves status labels and icon button hit areas', () => {
+  const source = `<script>import { FontAwesomeIcon } from '@fortawesome/svelte-fontawesome';</script><span class="lc-chip-warning"><FontAwesomeIcon icon="bell" />보존</span><button data-testid="close" aria-label="Close" class="lc-button-neutral min-h-11"><FontAwesomeIcon icon="xmark" /></button>`;
+  assert.ok(!rules(source).includes('icon-backplate'));
+});
+test('bundles current neutral list and unboxed icon guidance', async () => {
+  const patterns = getDesignSystem('patterns').patterns;
+  assert.ok(patterns.some((item) => item.id === 'list-interaction'));
+  assert.ok(patterns.some((item) => item.id === 'icon-backplate'));
+  assert.ok(snapshot.classes.includes('lc-list-link'));
+  assert.ok(!snapshot.classes.includes('lc-icon-accent-success'));
+  assert.ok(snapshot.sources['src/routes/notices/changes/+page.svelte']);
+  assert.ok(!getComponent('RecentNotices.svelte').source.includes('lc-icon-accent-success'));
+});
+
+test('list rows have no pointer-hover rules and preserve button hover and keyboard focus', () => {
+  const listRules = snapshot.cssRules.filter((rule) => /\.lc-flat-list-row/.test(rule.selector));
+  assert.deepEqual(
+    listRules.filter((rule) => rule.selector.includes(':hover')),
+    [],
+  );
+  assert.ok(
+    snapshot.cssRules.some(
+      (rule) =>
+        rule.selector.includes('.lc-result-action-secondary:hover') &&
+        rule.declarations.some((decl) => decl.property === 'background'),
+    ),
+  );
+  assert.ok(
+    listRules.some(
+      (rule) =>
+        rule.selector.includes(':focus-visible') &&
+        rule.declarations.some((decl) => decl.property === 'background'),
+    ),
+  );
+  assert.ok(
+    snapshot.cssRules.some(
+      (rule) =>
+        rule.selector.includes('.lc-list-link:focus-visible') &&
+        rule.declarations.some((decl) => decl.property === 'outline'),
+    ),
+  );
 });

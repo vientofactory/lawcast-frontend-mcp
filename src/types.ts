@@ -38,6 +38,8 @@ export type RuleId =
   | 'unknown-class'
   | 'raw-color'
   | 'decoration'
+  | 'list-interaction'
+  | 'icon-backplate'
   | 'custom-modal'
   | 'missing-testid'
   | 'focus-hidden'

@@ -26,10 +26,10 @@ async function collect(directory: string): Promise<void> {
   }
 }
 await collect('src/lib/components');
+await collect('src/routes');
 files.push(
   'src/app.css',
   'src/lib/styles/layout.css',
-  'src/routes/+layout.svelte',
   'src/lib/theme.ts',
   ...[
     'modal-focus.ts',

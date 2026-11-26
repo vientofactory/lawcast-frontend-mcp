@@ -157,10 +157,86 @@ export function reviewSvelte(source: string, filename = 'Component.svelte'): Rev
             add('unknown-token', `Unknown token ${match[1]}.`, offset);
       }
     };
+    const classesOf = (node: AST.SvelteNode) => {
+      if (!('attributes' in node)) return '';
+      return node.attributes
+        .map((attr) => {
+          if (attr.type === 'Attribute' && attr.name === 'class') return strings(attr.value);
+          if (attr.type === 'ClassDirective') return `${attr.name} ${strings(attr.value)}`;
+          return '';
+        })
+        .join(' ');
+    };
+    const checkListClasses = (node: AST.SvelteNode, title = true) => {
+      const text = classesOf(node);
+      for (const value of text.split(/\s+/).filter(Boolean)) {
+        const utility = baseUtility(value);
+        if (
+          (title &&
+            /^(?:lc-link|lc-card-list-link|lc-text-(?:accent|info|on-accent)|underline|decoration-.+)$/.test(
+              utility,
+            )) ||
+          (/hover:|focus:|focus-visible:|group-hover|group-focus/.test(value) &&
+            /^(?:text-|bg-|.*(?:translate|scale|rotate)-|underline)/.test(utility)) ||
+          (title && /^text-[[(].*--lc-text-accent/.test(utility))
+        )
+          add(
+            'list-interaction',
+            `List destination/title overrides shared treatment: ${value}.`,
+            'start' in node ? Number(node.start) : 0,
+          );
+      }
+    };
     walk(ast.fragment, (node) => {
       if (node.type === 'HtmlTag')
-        add('dynamic-style', 'Raw HTML requires content and design review.', node.start);
+        add(
+          'dynamic-style',
+          'Raw HTML requires content and design review.',
+          'start' in node ? Number(node.start) : 0,
+        );
       if (!('attributes' in node)) return;
+      const classNames = classesOf(node).split(/\s+/);
+      if (classNames.includes('lc-card-list-link'))
+        add(
+          'list-interaction',
+          'Retired list link class lc-card-list-link.',
+          'start' in node ? Number(node.start) : 0,
+        );
+      if (classNames.includes('lc-list-link')) {
+        checkListClasses(node);
+        if ('fragment' in node) walk(node.fragment, (child) => checkListClasses(child, false));
+        if (
+          node.type !== 'RegularElement' ||
+          node.name !== 'a' ||
+          !node.attributes.some((attr) => 'name' in attr && attr.name === 'href')
+        )
+          add(
+            'list-interaction',
+            'List destinations must retain native anchor href semantics.',
+            'start' in node ? Number(node.start) : 0,
+          );
+      }
+      if (classNames.includes('lc-result-action-secondary')) checkListClasses(node);
+      if (classNames.includes('lc-list-title')) {
+        checkListClasses(node);
+        if ('fragment' in node) walk(node.fragment, checkListClasses);
+      }
+      if (node.type === 'RegularElement' && ['div', 'span'].includes(node.name)) {
+        const children = node.fragment.nodes.filter(
+          (child) => child.type !== 'Comment' && !(child.type === 'Text' && !child.data.trim()),
+        );
+        if (
+          children.length === 1 &&
+          children[0].type === 'Component' &&
+          children[0].name === 'FontAwesomeIcon' &&
+          /\bbg-|\blc-chip-|\blc-icon-accent-|\brounded|\bp(?:x|y)?-\d/.test(classesOf(node))
+        )
+          add(
+            'icon-backplate',
+            'Decorative FontAwesome wrapper adds a background or padded tile.',
+            'start' in node ? Number(node.start) : 0,
+          );
+      }
       if (node.type === 'SvelteElement')
         add('dynamic-style', 'Dynamic element requires runtime review.', node.start);
       for (const attr of node.attributes) {
