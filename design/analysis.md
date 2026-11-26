@@ -2,7 +2,7 @@
 
 ## Source and precedence
 
-The bundled snapshot records frontend 3.2.0, the exact source commit, per-file SHA-256 and a combined fingerprint. The frontend was read-only throughout extraction. It contains 53 shared Svelte components, 48 semantic tokens and 232 classes defined in the two shared CSS files. Source-observed hook names are separately identified; their presence does not imply a global CSS definition.
+The bundled snapshot records the current frontend version, Git baseline, per-file SHA-256 and a combined fingerprint. It is regenerated from the working sources, including shared components, all Svelte routes and the two shared CSS files; hashes, not the baseline commit alone, identify uncommitted changes. Source-observed hook names are separately identified; their presence does not imply a global CSS definition. See `design/snapshot.json` for the current counts and provenance.
 
 Sources of truth are `frontend/src/app.css`, `frontend/src/lib/styles/layout.css`, the shared component implementations and the root `agent_memories/repo/frontend-notes.md`. The original exploration document describes older export-let/reactive-label behavior; current components use Svelte 5 runes and `#lib` aliases. Historical screenshot/interaction findings in `agent_memories/65-ui-layout-redesign/` explain why existing focus, disclosure and notification abstractions must be preserved.
 
@@ -35,3 +35,11 @@ Static analysis cannot certify contrast, touch target geometry, page-level hiera
 ## Maintenance and rollback
 
 Regenerate the snapshot after frontend design changes and review source hashes and policy together. The runtime deliberately does not follow arbitrary external roots. Run the unit and real-protocol tests, then introduce the CLI on changed frontend files before considering a legacy-wide baseline. The verification demo preserves its original hash, modifies a copy, and proves rollback on a second copy; actual frontend source and unrelated working-tree changes remain untouched.
+
+## Unified list and icon contract (2026-11-27)
+
+Current working-source extraction includes every Svelte route, not only shared components. Source hashes/fingerprint identify uncommitted designs; the Git commit is the baseline, not a claim that its tree equals the snapshot.
+
+Navigable lists share `lc-flat-list-row` structure, `lc-list-title` typography and native `a.lc-list-link` behavior. Pointer hover is visually inert across rows, titles and metadata: no row background, color, underline or movement changes. Independent secondary buttons retain their neutral hover background. Keyboard focus retains the shared row surface, a visible outline and 44px link targets. Whole-row destinations and title/information-region destinations keep the same neutral contract; independent downloads/history/comparison controls never become nested links. Prose links remain distinct. The common flat-row base still overrides legacy dark-card surfaces.
+
+FontAwesome glyphs have no decorative backplates or padded tiles. Semantic icon colors, status text badges, banner surfaces, button hit targets and stateful switch thumbs remain intentional. The two new AST rules reject list-title overrides (including descendant anchors and literal dynamic classes) and icon-only wrapper plates; runtime/custom CSS still needs browser review.
