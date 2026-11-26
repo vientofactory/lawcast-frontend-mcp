@@ -14,6 +14,7 @@ test('serves tools, resources and prompts over real MCP stdio', async () => {
   const client = new Client({ name: 'lawcast-test', version: '1.0.0' });
   try {
     await client.connect(transport);
+    assert.equal(client.getServerVersion()?.version, '0.1.1');
     const tools = await client.listTools();
     assert.deepEqual(tools.tools.map((item) => item.name).sort(), [
       'get_component',
