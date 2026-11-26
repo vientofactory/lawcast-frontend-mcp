@@ -1,6 +1,6 @@
 {
   "name": "lawcast-frontend-mcp",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Source-backed LawCast design system and Svelte UI guardrails over MCP",
   "private": true,
   "type": "module",

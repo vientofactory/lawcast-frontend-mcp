@@ -1,5 +1,5 @@
 {
-  "version": 3,
+  "version": 4,
   "principles": [
     {
       "id": "palette",
@@ -95,6 +95,15 @@
       "id": "readme-scope",
       "guidance": "Keep README a concise project usage guide: purpose, requirements, install/connect/configure, common commands and links. Put design, coding and test-authoring rules in their owning policy or AGENTS.md and link rather than duplicate them. Exclude PR required-check lists, branch protection, internal CI matrices and task verification logs. Preserve technical examples, actual operating limitations and the existing document language.",
       "evidence": ["AGENTS.md: README Scope and Writing Rules", "README.md"]
+    },
+    {
+      "id": "playwright-commit-gate",
+      "guidance": "Before any frontend-related commit, run npm run test:e2e:all without file, grep or project filters and require every configured browser/fixture suite to pass on the exact staged source. Do not commit after a failure, missing prerequisites, skipped required suites or subsequent source changes. Fix failures, then rerun the entire matrix from the beginning; keep assertions, discovery and failure propagation. Install and retain the frontend .githooks/pre-commit gate; never bypass it with --no-verify. Static MCP review and selected tests are not commit authorization. The full gate includes real-backend integration: configure PLAYWRIGHT_BACKEND_URL as the API base including /api, or provide the local default backend. Missing or unavailable backend prerequisites block commits; record the target and never describe mock results as live integration proof.",
+      "evidence": [
+        "frontend/package.json: test:e2e:all",
+        "frontend/.githooks/pre-commit",
+        "AGENTS.md: Frontend Playwright commit gate"
+      ]
     }
   ],
   "manualChecks": [
@@ -102,7 +111,8 @@
     "Verify 320px/mobile/desktop, 200% text, reduced motion, long Korean content and overflow.",
     "Verify loading/empty/failure/429, cancellation, dialog focus restoration and transition interruption.",
     "Verify hierarchy, single-owner dividers and shared-component reuse; static lint cannot certify visual equivalence.",
-    "Verify test/helper/fixture sources are .ts, included in strict type checking and launched by the existing package runner; update CI and preserve vendor/generated-format exceptions."
+    "Verify test/helper/fixture sources are .ts, included in strict type checking and launched by the existing package runner; update CI and preserve vendor/generated-format exceptions.",
+    "Commit gate: npm run test:e2e:all must pass in full on the exact staged source after the last edit. Fix any failure and rerun the entire matrix; never bypass the pre-commit hook or replace full coverage with selected tests."
   ],
   "rules": [
     {
