@@ -13,7 +13,7 @@ export function getDesignSystem<T extends DesignTopic = 'all'>(topic: T = 'all' 
     fingerprint: snapshot.fingerprint,
     basis: 'Bundled source snapshot; refresh explicitly after frontend changes.',
     limitations:
-      'Static checks are not visual/accessibility certification. MCP advice alone does not block writes; use the CLI gate.',
+      'Static checks are not visual/accessibility certification or commit authorization. Run the frontend npm run test:e2e:all gate on unchanged staged source; the tracked frontend pre-commit hook enforces it. MCP itself remains read-only.',
   };
   const sections = {
     tokens: snapshot.tokens,

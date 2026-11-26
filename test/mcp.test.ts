@@ -14,7 +14,7 @@ test('serves tools, resources and prompts over real MCP stdio', async () => {
   const client = new Client({ name: 'lawcast-test', version: '1.0.0' });
   try {
     await client.connect(transport);
-    assert.equal(client.getServerVersion()?.version, '0.1.1');
+    assert.equal(client.getServerVersion()?.version, '0.1.2');
     const tools = await client.listTools();
     assert.deepEqual(tools.tools.map((item) => item.name).sort(), [
       'get_component',
@@ -53,6 +53,12 @@ test('serves tools, resources and prompts over real MCP stdio', async () => {
     assert.ok(principles.some((item) => item.id === 'icon-backplate'));
     assert.ok(
       principles.some(
+        (item) =>
+          item.id === 'playwright-commit-gate' && item.guidance.includes('npm run test:e2e:all'),
+      ),
+    );
+    assert.ok(
+      principles.some(
         (item) => item.id === 'test-authoring' && item.guidance.includes('TypeScript .ts'),
       ),
     );
@@ -61,6 +67,12 @@ test('serves tools, resources and prompts over real MCP stdio', async () => {
       arguments: { query: '.lc-list-link' },
     });
     assert.match(JSON.stringify(styles.structuredContent), /--lc-text-primary/);
+    const warningStyles = await client.callTool({
+      name: 'get_style_rules',
+      arguments: { query: '.lc-flat-list-row .lc-text-warning' },
+    });
+    assert.match(JSON.stringify(warningStyles.structuredContent), /color-mix/);
+    assert.match(JSON.stringify(warningStyles.structuredContent), /--lc-status-warning/);
     const listViolation = await client.callTool({
       name: 'review_svelte',
       arguments: { source: '<h2 class="lc-list-title lc-link">Title</h2>' },
@@ -116,6 +128,13 @@ test('serves tools, resources and prompts over real MCP stdio', async () => {
     assert.equal(prompt.type, 'text');
     assert.ok('text' in prompt);
     assert.match(prompt.text, /review_svelte/);
+    assert.match(client.getInstructions() ?? '', /npm run test:e2e:all/);
+    assert.match(prompt.text, /npm run test:e2e:all/);
+    assert.match(prompt.text, /PLAYWRIGHT_BACKEND_URL/);
+    assert.match(prompt.text, /Do not commit/);
+    assert.match(prompt.text, /rerun the entire/);
+    assert.match(prompt.text, /--no-verify/);
+    assert.match(prompt.text, /static pass does not authorize/);
   } finally {
     await client.close();
   }
